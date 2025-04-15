@@ -30,7 +30,7 @@ while True:
         maxInt = int(maxInt/10)
 
 # map_to_build----------------------------------------------------
-def merge_ss_vcf(ss, vcf, from_build, to_build, chroms, coordinate):
+def merge_ss_vcf(ss, vcf, from_build, to_build, chroms, coordinate, chain_file=None):
     vcfs = glob.glob(vcf)
     ssdf = pd.read_table(ss, sep=None, engine='python', dtype=str)
     add_fields_if_missing(df=ssdf)
@@ -64,7 +64,15 @@ def merge_ss_vcf(ss, vcf, from_build, to_build, chroms, coordinate):
     print("liftover remaining variants")
     ssdf = pd.concat([ssdf_with_rsid, ssdf_without_rsid])
     ssdf[HM_CC_DSET] = "lo"
-    build_map = lft.LiftOver(lft.ucsc_release.get(from_build), lft.ucsc_release.get(to_build)) if from_build != to_build else None
+    if from_build != to_build:
+        if chain_file:
+            print("Accessing local file!!")
+            build_map = lft.LiftOver(chain_file)
+        else:
+            print("Oops, have to download")
+            build_map = lft.LiftOver(lft.ucsc_release.get(from_build), lft.ucsc_release.get(to_build))
+    else:
+        build_map = None
     if build_map:
         ssdf[BP_DSET] = [lft.map_bp_to_build_via_liftover(chromosome=x, bp=y, build_map=build_map,coordinate=coordinate[0]) for x, y in zip(ssdf[CHR_DSET], ssdf[BP_DSET])]
     for chrom in chroms:
@@ -126,6 +134,8 @@ def main():
     argparser.add_argument('-to_build', help='The latest (desired) build e.g. "38"', required=True)
     argparser.add_argument('-chroms', help='A list of chromosomes to process', default=DEFAULT_CHROMS)
     argparser.add_argument('-coordinate', help='index', nargs='?', const="1-based", required=True)
+    argparser.add_argument('-chain', help='Path to chain file for liftover (optional)', required=False)
+
     args = argparser.parse_args()
 
     ss = args.f
@@ -134,9 +144,10 @@ def main():
     to_build = args.to_build
     chroms = listify_string(args.chroms)
     coordinate=args.coordinate
+    chain_file = args.chain
 
 
-    merge_ss_vcf(ss, vcf, from_build, to_build, chroms, coordinate)
+    merge_ss_vcf(ss, vcf, from_build, to_build, chroms, coordinate, chain_file)
 
 
 

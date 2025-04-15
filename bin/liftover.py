@@ -58,12 +58,15 @@ def map_bp_to_build_via_ensembl(chromosome, bp, from_build, to_build):
     return data
 
 
-def open_file_and_process(file, from_build, to_build):
+def open_file_and_process(file, from_build, to_build, chain_file_path=None):
     filename = get_filename(file)
     new_filename = 'liftover_' + filename + '.tsv'
     build_map = None
     if from_build != to_build:
-        build_map = LiftOver(ucsc_release.get(from_build), ucsc_release.get(to_build))
+        if chain_file_path:
+            build_map = LiftOver(chain_file_path)
+        else:
+            build_map = LiftOver(ucsc_release.get(from_build), ucsc_release.get(to_build))
 
     with open(file) as csv_file:
         count = 0
@@ -98,14 +101,15 @@ def main():
     argparser.add_argument('-f', help='The name of the file to be processed', required=True)
     argparser.add_argument('-original', help='The build of the file', required=True)
     argparser.add_argument('-mapped', help='The build to map to', required=True)
+    argparser.add_argument('-chain', help='Path to chain file (optional)', required=False)
     args = argparser.parse_args()
     file = args.f
     from_build = args.original
     to_build = args.mapped
+    chain_file = args.chain
 
 
-
-    open_file_and_process(file, from_build, to_build)
+    open_file_and_process(file, from_build, to_build, chain_file)
 
 if __name__ == "__main__":
     main()
